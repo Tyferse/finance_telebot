@@ -690,18 +690,18 @@ def make_categories_report(data, categories, ui):
 
 
 if __name__ == '__main__':
-    print(show_balance('1548032094'))
+    print(show_balance('INSERT_YOUR_TG_ID'))
     print([(t[2], t[1]) for t in select_operations(
         ui=1548032094, sort_by='date')])
 
     crs1.execute("SELECT * FROM operations WHERE "
-                 "user_id = md5(1548032094) AND 0.0 <= amount "
+                 "user_id = md5(INSERT_YOUR_TG_ID) AND 0.0 <= amount "
                  "AND amount <= 10000.0 ORDER BY total DESC")
     db1.commit()
 
     """
     crs1.execute("UPDATE operations SET date='2022-09-11-17-11' "
-                 "WHERE user_id=md5(1548032094) "
+                 "WHERE user_id=md5(INSERT_YOUR_TG_ID) "
                  "and date='00020002020-'")
     db1.commit()
     """
@@ -715,16 +715,16 @@ if __name__ == '__main__':
           sum([op[5] for op in so if op[7] == 'Хлебобулочные']))
 
     print(*data_summary(select_operations(date_for('month'), "date",
-                                          ui=1548032094),
+                                          ui='INSERT_YOUR_TG_ID'),
                         'day'), sep='\n\n')
     make_main_report(data_summary(
-        select_operations(date_for('month'), "date", ui=1548032094),
-                     'day'), (True, True, True), 1548032094)
+        select_operations(date_for('month'), "date", ui='INSERT_YOUR_TG_ID'),
+                     'day'), (True, True, True), 'INSERT_YOUR_TG_ID')
 
     d = []
     for c in ['Товары', "Еда"]:
         d.append(category_summary(
-            select_operations(date_for('month'), "date", ui=1548032094),
+            select_operations(date_for('month'), "date", ui='INSERT_YOUR_TG_ID'),
             c))
 
-    make_categories_report(d, ['Товары', "Еда"], ui=1548032094)
+    make_categories_report(d, ['Товары', "Еда"], ui='INSERT_YOUR_TG_ID')
