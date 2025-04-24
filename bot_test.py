@@ -1,12 +1,11 @@
-import local_database.fb_sql as db
 import pickle
 import time
-from matplotlib import pyplot as plt
-# from parser.fb_parser import CHECK
+
+import local_database.fb_sql as db
+from parser.fb_parser import CHECK
 
 
-clf_ex, clf_in = pickle.load(
-    open('data_define\\categorizer.data', 'rb'))
+clf_ex, clf_in = pickle.load(open('data_define\\categorizer.data', 'rb'))
 ct_ex_list, ct_in_list, subct_ex_dict, subct_in_dict = \
     pickle.load(open('local_database\\cts_lists.data', 'rb'))
 
@@ -56,7 +55,7 @@ def define_cts_ex(oper_name):
 
 for qr in check_list:
     st = time.perf_counter()
-    # t = CHECK(qr)
+    t = CHECK(qr)
     li = t.get_list()
     date = t.date()
     print(date)

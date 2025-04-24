@@ -19,10 +19,10 @@ from parser.fb_parser import CHECK
 
 __version__ = '1.1'
 
-clf_ex, clf_in = pickle.load(open('data_define\\categorizer.data', 'rb'))
+clf_ex, clf_in = pickle.load(open('data_define/categorizer.data', 'rb'))
 ct_ex_list, ct_in_list, subct_ex_dict, subct_in_dict = pickle.load(
-    open('local_database\\cts_lists.data', 'rb'))
-# store = shelve.open('local_database\\backup_data.data')
+    open('local_database/cts_lists.data', 'rb'))
+# store = shelve.open('local_database/backup_data.data')
 
 
 bot = Bot(os.getenv('TOKEN'))
@@ -934,7 +934,7 @@ async def del_it_all(message: types.Message, state: FSMContext):
         except IndexError:
             continue
 
-    store = shelve.open('local_database\\backup_data.data')
+    store = shelve.open('local_database/backup_data.data')
     first_key = [k for k in store if k.startswith(str(message.from_user.id))]
     key = (f'{message.from_user.id}_' + date.today().isoformat() 
            + f'-{time.localtime().tm_hour:0>2s}'
@@ -967,7 +967,7 @@ async def del_selected(message: types.Message, state: FSMContext):
         except IndexError:
             continue
 
-    store = shelve.open('local_database\\backup_data.data')
+    store = shelve.open('local_database/backup_data.data')
     first_key = [k for k in store if k.startswith(str(message.from_user.id))]
     key = (f'{message.from_user.id}_' + date.today().isoformat() 
            + f'-{time.localtime().tm_hour:0>2s}'
@@ -1700,7 +1700,7 @@ async def show_all_operations(call: types.CallbackQuery, state: FSMContext):
 
 @dp.callback_query(lambda call: call.data == 'restore')
 async def restore_data(call: types.CallbackQuery):
-    store = shelve.open('local_database\\backup_data.data')
+    store = shelve.open('local_database/backup_data.data')
     key = [k for k in store if k.startswith(str(call.from_user.id))]
     if len(key) == 0:
         await bot.send_message(call.from_user.id,
@@ -1731,7 +1731,7 @@ async def restore_data(call: types.CallbackQuery):
 
 @dp.callback_query(lambda call: call.data == 'backup')
 async def restore_backup(call: types.CallbackQuery):
-    store = shelve.open('local_database\\backup_data.data')
+    store = shelve.open('local_database/backup_data.data')
     key = [k for k in store if k.startswith(str(call.from_user.id))]
     key = key[0]
     dat = store[key]

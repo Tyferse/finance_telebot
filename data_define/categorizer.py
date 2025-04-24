@@ -128,92 +128,91 @@
 Подарки / помощь
 """
 
-# import random
+import random
 import pickle
 from sklearn import metrics
 from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.linear_model import SGDClassifier
 # from sklearn.model_selection import GridSearchCV
 # from sklearn.model_selection import ParameterGrid
-# from sklearn.model_selection import train_test_split
+from sklearn.model_selection import train_test_split
 from sklearn.pipeline import Pipeline
 
 
-"""
-# Обновление данных в датасете расходов
-lines = open('data_set_ex.txt', encoding='utf-8').readlines()
-random.shuffle(lines)  # перемешивание данных из датасета
-X, Y = [], []
-for line in lines:
-    it, lb = line.split(' @ ')
-    lb = lb.rstrip()
-    if lb not in ['Жильё', "Услуги", "Транспорт", "Разное", "Товары",
-                  "Здоровье", "Развлечение", "Еда", "Образование"]:
-        if lb in ['доровье', 'Тоовары', 'Образоавние',
-                  'ТОвары', 'Эдоровье']:
-            # Если допущена ошибка в написании метка,
-            # то заменяем её на правильно написанную
-            rep = {'доровье': 'Здоровье', 'Тоовары': "Товары",
-                   'Образоавние': "Образование", 'ТОвары': "Товары",
-                   'Эдоровье': "Здоровье"}
-            lb = rep[lb]
+def update_data():
+    # Обновление данных в датасете расходов
+    lines = open('data_set_ex.txt', encoding='utf-8').readlines()
+    random.shuffle(lines)  # перемешивание данных из датасета
+    X, Y = [], []
+    for line in lines:
+        it, lb = line.split(' @ ')
+        lb = lb.rstrip()
+        if lb not in ['Жильё', "Услуги", "Транспорт", "Разное", "Товары",
+                      "Здоровье", "Развлечение", "Еда", "Образование"]:
+            if lb in ['доровье', 'Тоовары', 'Образоавние',
+                      'ТОвары', 'Эдоровье']:
+                # Если допущена ошибка в написании метка,
+                # то заменяем её на правильно написанную
+                rep = {'доровье': 'Здоровье', 'Тоовары': "Товары",
+                       'Образоавние': "Образование", 'ТОвары': "Товары",
+                       'Эдоровье': "Здоровье"}
+                lb = rep[lb]
+            
+            # Если введено М, то скорее всего произошла опечатка
+            # при попытке нажать Ctrl + V, и определить метку нужно заново
+            if lb == 'м':
+                print(it, end=' - > ')
+                lb = input()
+    
+        X.append(it)
+        Y.append(lb)
+    
+    
+    print(set(Y))  # Вывод всех различных меток
+    input('Enter any key to continue: ')  # задержка
+    
+    # Разделение данных на тренировочный, тестовый и валидационный сеты
+    X_train, X_valid, y_train, y_valid = train_test_split(
+        X, Y, test_size=0.1, random_state=42)
+    X_train, X_test, y_train, y_test = train_test_split(
+        X_train, y_train, test_size=0.2, random_state=42)
+    
+    print(set(y_train), set(y_test), set(y_valid), sep='\n')
+    # проверка на наличие всех различных меток в каждом сете
+    input('Enter any key to continue: ')
+    
+    pickle.dump([X_train, X_test, X_valid, y_train, y_test, y_valid],
+                open('data_set_ex.data', 'wb'))  # сохранение данных в файле
+    
+    
+    # Обновление данных в датасете доходов
+    lines = open('data_set_in.txt', encoding='utf-8').readlines()
+    random.shuffle(lines)  # перемешивание данных из датасета
+    X, Y = [], []
+    for line in lines:
+        it, lb = line.split(' @ ')
+        lb = lb.rstrip()
+    
+        X.append(it)
+        Y.append(lb)
+    
+    
+    print(set(Y))  # Вывод всех различных меток
+    input('Enter any key to continue: ')  # задержка
+    
+    # Разделение данных на тренировочный, тестовый и валидационный сеты
+    X_train, X_valid, y_train, y_valid = train_test_split(
+        X, Y, test_size=0.2, random_state=21)
+    X_train, X_test, y_train, y_test = train_test_split(
+        X_train, y_train, test_size=0.3, random_state=21)
+    
+    print(set(y_train), set(y_test), set(y_valid), sep='\n')
+    # проверка на наличие всех различных меток в каждом сете
+    input('Enter any key to continue: ')
+    
+    pickle.dump([X_train, X_test, X_valid, y_train, y_test, y_valid],
+                open('data_set_in.data', 'wb'))  # сохранение данных в файле
 
-        if lb == 'м':  # Если введено М, то скорее всего
-            # произошла опечатка при попытке нажать Ctrl + V,
-            # и определить метку нужно заново
-            print(it, end=' - > ')
-            lb = input()
-
-    X.append(it)
-    Y.append(lb)
-
-
-print(set(Y))  # Вывод всех различных меток
-input('Enter any key to continue: ')  # задержка
-
-# Разделение данных на тренировочный, тестовый и валидационный сеты
-X_train, X_valid, y_train, y_valid = train_test_split(
-    X, Y, test_size=0.1, random_state=42)
-X_train, X_test, y_train, y_test = train_test_split(
-    X_train, y_train, test_size=0.2, random_state=42)
-
-print(set(y_train), set(y_test), set(y_valid), sep='\n')
-# проверка на наличие всех различных меток в каждом сете
-input('Enter any key to continue: ')
-
-pickle.dump([X_train, X_test, X_valid, y_train, y_test, y_valid],
-            open('data_set_ex.data', 'wb'))  # сохранение данных в файле
-"""
-
-"""
-# Обновление данных в датасете доходов
-lines = open('data_set_in.txt', encoding='utf-8').readlines()
-random.shuffle(lines)  # перемешивание данных из датасета
-X, Y = [], []
-for line in lines:
-    it, lb = line.split(' @ ')
-    lb = lb.rstrip()
-
-    X.append(it)
-    Y.append(lb)
-
-
-print(set(Y))  # Вывод всех различных меток
-input('Enter any key to continue: ')  # задержка
-
-# Разделение данных на тренировочный, тестовый и валидационный сеты
-X_train, X_valid, y_train, y_valid = train_test_split(
-    X, Y, test_size=0.2, random_state=21)
-X_train, X_test, y_train, y_test = train_test_split(
-    X_train, y_train, test_size=0.3, random_state=21)
-
-print(set(y_train), set(y_test), set(y_valid), sep='\n')
-# проверка на наличие всех различных меток в каждом сете
-input('Enter any key to continue: ')
-
-pickle.dump([X_train, X_test, X_valid, y_train, y_test, y_valid],
-            open('data_set_in.data', 'wb'))  # сохранение данных в файле
-"""
 
 
 def make_categorizer(dataset):
@@ -225,13 +224,13 @@ def make_categorizer(dataset):
         print(set(y_train), set(y_test), set(y_valid), sep='\n')
         input('Enter any key to continue: ')
 
-    # Конструирование нейронной сети классификатора
+    # Конструирование классификатора
     sgd_clf = Pipeline([
         ('tfidf', TfidfVectorizer()),
         ('sgd_clf', SGDClassifier(random_state=42, penalty='l2',
                                   loss='modified_huber',
                                   class_weight='balanced'))])
-    sgd_clf.fit(X_train, y_train)  # обучение нейронной сети
+    sgd_clf.fit(X_train, y_train)  # обучение классификатора
 
     if __name__ == '__main__':
         # Вывод данных тестовой выборки

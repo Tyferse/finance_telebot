@@ -1,4 +1,5 @@
 import time
+
 from bs4 import BeautifulSoup as BS
 from selenium import webdriver
 from selenium.common import exceptions as sel_exs
@@ -7,7 +8,7 @@ from selenium.webdriver.support import expected_conditions as EC
 from selenium.webdriver.support.wait import WebDriverWait
 
 
-test_check = ["INSERT_YOUR_LIST_OF_RECEIPTS']
+test_check = ["INSERT_YOUR_LIST_OF_RECEIPTS"]
 
 
 class CHECK:
@@ -21,21 +22,22 @@ class CHECK:
         """
         Функция, при отсутствии ошибок, возвращает список кортежей,
         в каждом из которых содержится информация об операции из чека
-        (название, цена за единицу, количество, общая стоимость).
-
-        :return: Список кортежей с информацией об операциях в чеке.
-        При появлении исключения возвращается пустой список.
+        (название, цена за единицу, количество, общая стоимость)
+        
+        Returns:
+            list[tuple]: Список кортежей с информацией об операциях в чеке.
+                При появлении исключения возвращается пустой список.
         """
         try:
             self.driver.get(self.url)  # получение веб-страницы
         except sel_exs:
             return []
 
-        st = WebDriverWait(self.driver, 60) \
-            .until(EC.element_to_be_clickable(
-                (By.CSS_SELECTOR, '.b-checkform_nav > '
-                                  'li:nth-child(4) > a:nth-child(1)')
-            ))
+        st = (WebDriverWait(self.driver, 60)
+              .until(EC.element_to_be_clickable(
+              (By.CSS_SELECTOR,
+               '.b-checkform_nav > li:nth-child(4) > a:nth-child(1)')
+        )))
         # переход на поле ввода текста qr-кода
         try:
             st.click()
@@ -43,18 +45,17 @@ class CHECK:
             self.driver.execute_script("arguments[0].click();", st)
 
         try:
-            textarea = WebDriverWait(self.driver, 60)\
-                .until(EC.element_to_be_clickable(
-                    (By.CSS_SELECTOR, '#b-checkform_qrraw')
-                ))
-            b = WebDriverWait(self.driver, 60)\
-                .until(EC.element_to_be_clickable(
-                    (By.CSS_SELECTOR,
-                     '#b-checkform_tab-qrraw > div:nth-child(1) > '
-                     'div:nth-child(1) > div:nth-child(1) > '
-                     'form:nth-child(1) > div:nth-child(2) > '
-                     'div:nth-child(1) > button:nth-child(1)')
-                ))
+            textarea = (WebDriverWait(self.driver, 60)
+                        .until(EC.element_to_be_clickable(
+                        (By.CSS_SELECTOR, '#b-checkform_qrraw')
+            )))
+            b = (WebDriverWait(self.driver, 60)
+                 .until(EC.element_to_be_clickable(
+                 (By.CSS_SELECTOR,
+                  '#b-checkform_tab-qrraw > div:nth-child(1) > div:nth-child(1) > '
+                  'div:nth-child(1) > form:nth-child(1) > div:nth-child(2) > '
+                  'div:nth-child(1) > button:nth-child(1)')
+            )))
         except sel_exs.TimeoutException:
             return []
 
@@ -63,9 +64,9 @@ class CHECK:
             b.click()  # отправка текста qr-кода на проверку
         except Exception:
             self.driver.execute_script("arguments[0].click();", b)
-
-        time.sleep(3)  # ждём как минимум 3 секунды,
-        # чтобы результат нашего запроса прогрузился
+        
+        # ждём как минимум 3 секунды, чтобы результат нашего запроса прогрузился
+        time.sleep(3)
 
         html = BS(self.driver.page_source, 'html5lib')
         table = html.find('tbody')
@@ -73,30 +74,33 @@ class CHECK:
             time.sleep(3)
             html = BS(self.driver.page_source, 'html5lib')
             table = html.find('tbody')
-            if table is None:  # если чека нет или он не успел
-                # прогрузиться, возвращаем пустой список
+            
+            # если чека нет или он не успел прогрузиться, возвращаем пустой список
+            if table is None:
                 time.sleep(2)
 
         rows = table.findChildren('tr',
                                   attrs={'class': 'b-check_item'})
         items = []
-        for row in rows:  # перебираем ряды таблицы с товарами
-            # и добавляем их элементы в список предметов
-            _, item, per_price, count, end_price = row.findChildren(
-                'td'
-            )
-            items.append((item.text, per_price.text,
-                          count.text, end_price.text))
+        # перебираем ряды таблицы с товарами
+        # и добавляем их элементы в список предметов
+        for row in rows:
+            _, item, per_price, count, end_price = row.findChildren('td')
+            items.append((item.text, per_price.text, count.text, end_price.text))
 
         return items
 
     def date(self, is_iso_format: bool = True):
         """
-        Функция возвращает дату на основе информации,
-        указанной в тексте отсканированного qr-кода
-        (год, месяц, число, час, минуты).
+        Функция возвращает дату на основе информации, указанной в тексте
+        отсканированного qr-кода (год, месяц, число, час, минуты).
+        
+        Args:
+            is_iso_format (bool): Возвращать ли дату в виде строки ISO формата.
 
-        :return: Кортеж с информацией о дате получения чека.
+        Returns:
+            str | tuple[int]: Кортеж с информацией о дате получения чека
+                или строка с датой, если is_iso_format=True.
         """
         try:
             dt, *_ = self.qr.split('&')

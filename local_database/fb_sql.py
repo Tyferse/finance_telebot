@@ -4,6 +4,8 @@ import pickle
 import sqlite3
 import time
 from itertools import chain
+
+from IPython.core.pylabtools import figsize
 from matplotlib import pyplot as plt
 
 
@@ -20,19 +22,18 @@ db1 = sqlite3.connect(f1)
 crs1 = db1.cursor()
 
 crs1.execute("""CREATE TABLE IF NOT EXISTS operations(
-        user_id TEXT NOT NULL DEFAULT '1',
-        date VARCHAR(16) NOT NULL,
-        operation_name TEXT,
-        price_per_unit REAL NOT NULL,
-        amount REAL NOT NULL DEFAULT 1.0,
-        total REAL NOT NULL,
-        category VARCHAR NOT NULL,
-        subcategory VARCHAR
+             user_id TEXT NOT NULL DEFAULT '1',
+             date VARCHAR(16) NOT NULL,
+             operation_name TEXT,
+             price_per_unit REAL NOT NULL,
+             amount REAL NOT NULL DEFAULT 1.0,
+             total REAL NOT NULL,
+             category VARCHAR NOT NULL,
+             subcategory VARCHAR
     )""")
 db1.commit()
 
-ct_ex_list, ct_in_list, subct_ex_dict, subct_in_dict = \
-    pickle.load(open(f2, 'rb'))
+ct_ex_list, ct_in_list, subct_ex_dict, subct_in_dict = pickle.load(open(f2, 'rb'))
 
 catgs = ct_ex_list + ct_in_list
 subcatgs = list(chain.from_iterable(list(subct_in_dict.values()) +
@@ -50,15 +51,20 @@ db1.create_function('md5', 1, _md5id)
 def add_operation(oper_info: tuple):
     """
     Функция добавляет операцию в таблицу.
+    
+    Args:
+        oper_info (tuple): Информация об операции - это кортеж
+            из 8-ми элементов, каждый из которых соответствует столбцу таблицы
+            (идентификатор пользователя, дата, название операции,
+            цена за единицу, количество, общая стоимость,
+            категория, подкатегория).
 
-    :param oper_info: Информация об операции - это кортеж
-    из 8-ми элементов, каждый из которых соответствует столбцу таблицы
-    (идентификатор пользователя, дата, название операции,
-    цена за единицу, количество, общая стоимость,
-    категория, подкатегория).
+    Returns:
+        bool: Выполнилась ли операция успешно.
     """
-    assert len(oper_info) == 8, 'Кортеж всегда должен быть длины 8, ' \
-                                'все элементы должны быть заполнены.'
+
+    assert len(oper_info) == 8, \
+        'Кортеж всегда должен быть длины 8, все элементы должны быть заполнены.'
 
     db = sqlite3.connect(f1)
     crs = db.cursor()
@@ -70,8 +76,9 @@ def add_operation(oper_info: tuple):
                 f"date = '{oper_info[1]}' AND "
                 f"operation_name = '{oper_info[2]}' AND "
                 f"price_per_unit = {oper_info[3]}")
-
-    if crs.fetchone() is None:  # Если таковой нет, то добавляем её
+    
+    # Если таковой нет, то добавляем её
+    if crs.fetchone() is None:
         crs.execute("INSERT INTO operations "
                     "VALUES(md5(?), ?, ?, ?, ?, ?, ?, ?)",
                     oper_info)
@@ -86,14 +93,14 @@ def add_operation(oper_info: tuple):
 
 def update_operation(oper_info: tuple):
     """
-    Функция обновляет количество и общую сумму у операции
-    с такими же датой, названием и ценой за единицу.
-
-    :param oper_info: Информация об операции - это кортеж
-    из 8-ми элементов, каждый из которых соответствует столбцу таблицы
-    (идентификатор пользователя, дата, название операции,
-    цена за единицу, количество, общая стоимость,
-    категория, подкатегория).
+    Функция обновляет количество и общую сумму у операции с такими же датой,
+    названием и ценой за единицу.
+    
+    Args:
+        oper_info: Информация об операции - это кортеж из 8-ми элементов,
+            каждый из которых соответствует столбцу таблицы
+            (идентификатор пользователя, дата, название операции, цена за единицу,
+            количество, общая стоимость, категория, подкатегория).
     """
     with sqlite3.connect(f1) as db:
         crs = db.cursor()
@@ -119,65 +126,67 @@ def delete_operation(oper_info: tuple):
     цена за единицу, количество, общая стоимость,
     категория, подкатегория).
     """
-    assert len(oper_info) >= 4, 'Поиск операции происходит ' \
-                                'по её первым четырём полям.'
+    assert len(oper_info) >= 4, ('Поиск операции происходит '
+                                 'по её первым четырём полям.')
 
     with sqlite3.connect(f1) as db:
         crs = db.cursor()
-        # создание функции шифрования
         db.create_function('md5', 1, _md5id)
 
         crs.execute("DELETE FROM operations WHERE user_id = md5(?) AND "
                     "date = ? AND operation_name = ? AND "
                     "price_per_unit = ?", oper_info[:4])
         print(f'Operation: {"   ".join(map(str, oper_info[1:4]))}'
-              ' - deleted successfully')
+              f' - deleted successfully')
 
 
-def select_operations(points: tuple or list = None,
-                      cols: str or tuple or list = None,
-                      eqs: str or tuple or list = None, ui='1',
-                      *, sort_by: str or tuple or list = None):
+def select_operations(points: tuple | list = None,
+                      cols: str | tuple | list = None,
+                      eqs: str | tuple | list = None, ui='1',
+                      *, sort_by: str | tuple | list = None):
     """
-    Функция выбирает все операции, соответствующие указанным
-    ограничителям (points) определённых полей (cols),
-    и, при необходимости, сортирует эти данные
+    Функция выбирает все операции, соответствующие указанным ограничителям (points)
+    определённых полей (cols), и, при необходимости, сортирует эти данные
     по указанным полям (sort_by).
+    
+    Args:
+        points (tuple | list): Пары значений, по которым определяются ограничения
+            выборки (на одно поле == два ограничителя, сначала наименьший,
+            потом наибольший и никак иначе).
+        cols (str | tuple | list): Параметры (столбцы), по которым устанавливаются
+            ограничения выборки (одно поле == два ограничителя из кортежа points).
+        eqs (str | tuple | list): Поля, по которым будет происходить фильтр
+            операций. Допустимы категории и подкатегории.
+        ui (str | int): Идентификатор пользователя.
+        sort_by (str | tuple | list): Параметры, по которым происходит сортировка
+            выбранных данных.
 
-    :param points: Пары значений, по которым определяются ограничения
-    выборки (на одно поле == два ограничителя, сначала наименьший,
-    потом наибольший и никак иначе).
-    :param cols: Параметры (столбцы), по которым устанавливаются
-    ограничения выборки
-    (одно поле == два ограничителя из кортежа points).
-    :param eqs: Поля, по которым будет происходить фильтр операций.
-    Допустимы категории и подкатегории.
-    :param ui: Идентификатор пользователя.
-    :param sort_by: Параметры, по которым происходит сортировка
-    выбранных данных.
-    :return: Список операций исходя из указанных ограничений.
+    Returns:
+        list: Список операций исходя из указанных ограничений.
     """
+
     # Список полей, доступных для параметра cols
     accessible = ['date', 'price_per_unit', 'amount', 'total']
     # Список всех существующих для сортировки полей, кроме user_id
-    existing = accessible + ['operation_name', 'category',
-                             'subcategory']
+    existing = accessible + ['operation_name', 'category', 'subcategory']
 
     db = sqlite3.connect(f1)
     crs = db.cursor()
-    db.create_function('md5', 1, _md5id)  # создание функции шифрования
+    db.create_function('md5', 1, _md5id)
     # Инициализация sql-запроса
-    sql_str = "SELECT * FROM operations " \
-              f"WHERE user_id = md5({ui}) AND "
+    sql_str = f"SELECT * FROM operations WHERE user_id = md5({ui}) AND "
 
-    def add_filters(sql_string, categories: str or tuple):
+    def add_filters(sql_string, categories: str | tuple):
         """
         Функция, которая добавляет к sql-запросу поля для фильтрации
         операций по определённым категориям или подкатегориям.
+        
+        Args:
+            sql_string (str): Строка sql-запроса.
+            categories (str | tuple): Поля для фильтрации.
 
-        :param sql_string: Строка sql-запроса.
-        :param categories: Поля для фильтрации.
-        :return: Строка обновлённого sql-запроса.
+        Returns:
+            str: Строка обновлённого sql-запроса.
         """
         if not sql_string.endswith(' AND '):
             sql_string += ' AND '
@@ -195,13 +204,16 @@ def select_operations(points: tuple or list = None,
                 cs = [c for c in categories if c in catgs]
                 # подкатегории из картежа
                 scs = [c for c in categories if c in subcatgs]
-                if len(cs) == 1:  # Если категория одна,
-                    # то добавляем как единичный фильтр
+                
+                # Если категория одна, то добавляем как единичный фильтр
+                if len(cs) == 1:
                     sql_string += f"category = '{cs[0]}' AND "
-                else:  # Если несколько категорий,
-                    sql_string += '('  # то открываем скобки
-                    for c1 in cs:  # и добавляем каждую категорию
-                        # по отдельности чере операнд OR
+                
+                # Если несколько категорий, то открываем скобки
+                # и добавляем каждую категорию по отдельности через операнд OR
+                else:
+                    sql_string += '('
+                    for c1 in cs:
                         sql_string += f"category = '{c1}' OR "
                     else:
                         sql_string = sql_string[:-4]  # убираем " OR "
@@ -228,19 +240,21 @@ def select_operations(points: tuple or list = None,
         """
         Функция, которая добавляет поля сортировки к sql-запросу,
         если таковые указаны.
+        
+        Args:
+            sql_string (str): Строка sql-запроса.
+            sort_by_tags (str | tuple[str]): Поля сортировки.
 
-        :param sql_string: Строка sql-запроса.
-        :param sort_by_tags: Поля сортировки
-        :return: Строка завершённого sql-запроса.
+        Returns:
+            str: Строка завершённого sql-запроса.
         """
         if sort_by_tags is not None:
             sql_string += ' ORDER BY '
-            if isinstance(sort_by_tags, str) \
-                    and sort_by_tags in existing:
+            if isinstance(sort_by_tags, str) and sort_by_tags in existing:
                 sql_string += f'{sort_by_tags} DESC'
 
-            if isinstance(sort_by_tags, tuple) \
-                    and all(s in existing for s in sort_by_tags):
+            if (isinstance(sort_by_tags, tuple)
+               and all(s in existing for s in sort_by_tags)):
                 for s in sort_by_tags:
                     sql_string += f'{s} DESC, '
 
@@ -248,64 +262,57 @@ def select_operations(points: tuple or list = None,
 
         return sql_string
 
-    if cols is not None and isinstance(cols, str) \
-            and cols in accessible:
-        assert len(points) == 2, 'Если параметр ограничения один, ' \
-                                 'то ограничителей должно быть два'
-
-        if cols == 'date':  # Если указано поле date,
-            # то тип данных - текст
-            sql_str += f"'{points[0]}' <= {cols} " \
-                       f"AND {cols} <= '{points[1]}'"
-        else:  # иначе тип данных - число
-            sql_str += f"{points[0]} <= {cols} " \
-                       f"AND {cols} <= {points[1]}"
-
-        sql_str = add_filters(sql_str, eqs)  # Добавление фильтров,
-        # если они указаны
-        sql_str = add_sort(sql_str, sort_by)  # Добавление сортировки,
-        # если она указана
+    if cols is not None and isinstance(cols, str) and cols in accessible:
+        assert len(points) == 2, ('Если параметр ограничения один, '
+                                  'то ограничителей должно быть два')
+        
+        # Если указано поле date, то тип данных - текст
+        if cols == 'date':
+            sql_str += f"'{points[0]}' <= {cols} AND {cols} <= '{points[1]}'"
+        
+        # иначе тип данных - число
+        else:
+            sql_str += f"{points[0]} <= {cols} AND {cols} <= {points[1]}"
+        
+        # Добавление фильтров, если они указаны
+        sql_str = add_filters(sql_str, eqs)
+        # Добавление сортировки,  если она указана
+        sql_str = add_sort(sql_str, sort_by)
 
         crs.execute(sql_str)
         return crs.fetchall()
 
-    if cols is not None and isinstance(cols, tuple) \
-            and all(c in accessible for c in cols):
+    if (cols is not None and isinstance(cols, tuple)
+       and all(c in accessible for c in cols)):
         assert len(points) // 2 == len(cols), \
-            'Ограничителей должно быть в два раз больше, ' \
-            'чем параметров ограничения'
+            'Ограничителей должно быть в два раз больше, чем параметров ограничения'
 
         for i in range(0, len(points), 2):
             if cols[i // 2] == 'date':
-                sql_str += f"'{points[i]}' <= {cols[i // 2]} " \
-                           f"AND {cols[i // 2]} <= '{points[i + 1]}'" \
-                           f" AND "
+                sql_str += (f"'{points[i]}' <= {cols[i // 2]} "
+                            f"AND {cols[i // 2]} <= '{points[i + 1]}' AND ")
             else:
-                sql_str += f"{points[i]} <= {cols[i // 2]} " \
-                           f"AND {cols[i // 2]} <= {points[i + 1]} AND "
+                sql_str += (f"{points[i]} <= {cols[i // 2]} "
+                            f"AND {cols[i // 2]} <= {points[i + 1]} AND ")
 
         # Добавление фильтров, если они указаны, к строке sql-запроса,
-        # за исключением последних пяти символов,
-        # если те появляются (" AND ")
+        # за исключением последних пяти символов, если те появляются (" AND ")
         sql_str = add_filters(sql_str, eqs)
         # Добавление сортировки, если она указана, к строке sql-запроса,
         # за исключением последних пяти символов в конце (" AND ")
         sql_str = add_sort(sql_str, sort_by)
 
-        sql_str = sql_str if not sql_str.endswith(' AND ') \
-            else sql_str[:-5]
+        sql_str = sql_str if not sql_str.endswith(' AND ') else sql_str[:-5]
 
         crs.execute(sql_str)
         return crs.fetchall()
 
     if points is None and cols is None:
-        sql_str = sql_str if not sql_str.endswith(' AND ') \
-            else sql_str[:-5]
+        sql_str = sql_str if not sql_str.endswith(' AND ') else sql_str[:-5]
         sql_str = add_filters(sql_str, eqs)
         sql_str = add_sort(sql_str, sort_by)
 
-        sql_str = sql_str if not sql_str.endswith(' AND ') \
-            else sql_str[:-5]
+        sql_str = sql_str if not sql_str.endswith(' AND ')  else sql_str[:-5]
 
         crs.execute(sql_str)
         return crs.fetchall()
@@ -313,21 +320,22 @@ def select_operations(points: tuple or list = None,
     crs.close()
     db.close()
     raise ValueError('Some of entered values are wrong '
-                     f'(points = {points}, cols = {cols}, '
-                     f'sort_by = {sort_by})')
+                     f'(points = {points}, cols = {cols}, sort_by = {sort_by})')
 
 
 def date_for(period: str = 'day'):
     """
-    Функция возвращает один из четырёх промежутков времени
-    от сегодняшнего дня.
+    Функция возвращает один из четырёх промежутков времени от сегодняшнего дня.
 
-    :param period: Период времени. Принимает одно из четырёх значений:
-     'day', 'week', 'month' и 'year' - что означает соответственно день,
-      неделя, месяц, год.
-    :return: Указанный промежуток времени в виде кортежа.
+    Args:
+        period (str): Период времени. Принимает одно из четырёх значений:
+             'day', 'week', 'month' и 'year' - что означает соответственно день,
+              неделя, месяц, год.
+
+    Returns:
+        list: Указанный промежуток времени в виде списка.
     """
-    assert period in ('day', 'week', 'month', 'year'), ''
+    assert period in ('day', 'week', 'month', 'year')
 
     if period == 'day':
         now = datetime.date.today().isoformat()
@@ -353,50 +361,56 @@ def date_current(period: str = 'day'):
     """
     Функция возвращает один из четырёх промежутков времени
     от настоящего момента до начала периода.
+    
+    Args:
+        period (str): Период времени. Принимает одно из четырёх значений:
+            'day', 'week', 'month' и 'year' - что означает соответственно
+            текущие день, неделя, месяц, год.
 
-    :param period: Период времени. Принимает одно из четырёх значений:
-    'day', 'week', 'month' и 'year' - что означает соответственно
-    текущие день, неделя, месяц, год.
-    :return: Текущий промежуток времени в виде кортежа.
+    Returns:
+        list: Текущий промежуток времени в виде списка.
     """
     assert period in ('day', 'week', 'month', 'year'), ''
 
     if period == 'day':
         now = datetime.date.today().isoformat()
         return [now + '-00-00',
-                now + f'-{str(time.localtime().tm_hour):0>2s}'
-                      f'-{str(time.localtime().tm_min):0>2s}']
+                f'{now}-{time.localtime().tm_hour:0>2s}'
+                f'-{time.localtime().tm_min:0>2s}']
     if period == 'week':
         now = datetime.date.today()
         opposite = str(now - datetime.timedelta(now.weekday()))
         return [opposite + '-00-00',
-                str(now) + f'-{str(time.localtime().tm_hour):0>2s}'
-                           f'-{str(time.localtime().tm_min):0>2s}']
+                f'{now}-{time.localtime().tm_hour:0>2s}'
+                f'-{time.localtime().tm_min:0>2s}']
 
     if period == 'month':
         now = datetime.date.today()
         opposite = str(now - datetime.timedelta(now.day - 1))
         return [opposite + '-00-00',
-                str(now) + f'-{str(time.localtime().tm_hour):0>2s}'
-                           f'-{str(time.localtime().tm_min):0>2s}']
+                f'{now}-{time.localtime().tm_hour:0>2s}'
+                f'-{time.localtime().tm_min:0>2s}']
 
     if period == 'year':
         now = datetime.date.today()
         opposite = str(datetime.date(now.year, 1, 1))
         return [opposite + '-00-00',
-                str(now) + f'-{str(time.localtime().tm_hour):0>2s}'
-                           f'-{str(time.localtime().tm_min):0>2s}']
+                f'{now}-{time.localtime().tm_hour:0>2s}'
+                f'-{time.localtime().tm_min:0>2s}']
 
 
 def search_in_list(oper_list: list, search: str):
     """
     Функция ищет все операции из списка oper_list, в которых существует
     вхождение search в названии операции.
+    
+    Args:
+        oper_list (list[tuple]): Список кортежей с информацией об операциях.
+        search (str): Поисковой запрос.
 
-    :param oper_list: Список кортежей с информацией об операциях.
-    :param search: Поисковой запрос.
-    :return: Список операций, в которых найдено хотя бы
-    одно вхождение search.
+    Returns:
+        list[tuple]: Список операций, в которых найдено хотя бы
+            одно вхождение search.
     """
     return [op for op in oper_list if search in op[2].lower()]
 
@@ -405,10 +419,12 @@ def show_table(oper_list: list) -> str:
     """
     Функция конструирует строку вывода списка операций
     из введённого списка кортежей (oper_list).
+    
+    Args:
+        oper_list (list[tuple]): Список кортежей с информацией об операциях.
 
-    :param oper_list: Список кортежей с информацией об операциях.
-    :return: Отформатированная строка вывода информации
-    из списка oper_list
+    Returns:
+        str: Отформатированная строка вывода информации из списка oper_lis.
     """
     assert len(oper_list[0]) == 8
 
@@ -439,15 +455,16 @@ def show_table(oper_list: list) -> str:
 
 def show_balance(ui: str or int):
     """
-    Функция суммирует доходы и расходы, показывая глобальный баланс
-    пользователя.
+    Суммирование доходов и расходов для показа глобального баланса пользователя.
+    
+    Args:
+        ui (str | int): Идентификатор пользователя.
 
-    :param ui: Идентификатор пользователя.
-    :return: Сумму доходов и расходов.
+    Returns:
+        int: Сумму доходов и расходов.
     """
     b_l = select_operations(ui=ui)
-    return round(sum(op[5] for op in b_l), 2) \
-        if b_l else 'ещё не создан'
+    return round(sum(op[5] for op in b_l), 2) if b_l else 'ещё не создан'
 
 
 def data_summary(oper_list: list, summary: str = 'day'):
@@ -455,16 +472,19 @@ def data_summary(oper_list: list, summary: str = 'day'):
     Функция суммирует все стоимости операций из списка oper_list
     по четырём словарям: расходы по дате, доходы по дате,
     баланс и категории.
+    
+    Args:
+        oper_list (list[tuple]): Список кортежей с информацией об операциях.
+        summary (str): Периоды времени, по которым будут суммироваться стоимости
+            операций. Может принимать 3 значения: 'day', 'month', 'year'.
+            Например, при значении day все операции для первых трёх словарей
+            будут суммироваться по дням.
 
-    :param oper_list: Список кортежей с информацией об операциях.
-    :param summary: Периоды времени, по которым будут суммироваться
-    стоимости операций. Может принимать 3 значения: 'day', 'month',
-     'year'. Например, при значении day все операции для первых трёх
-     словарей будут суммироваться по дням.
-    :return: Пять словарей: первые три - с датами в качестве ключей,
-    два последних - с категориями. Первый - расходы, второй - доходы,
-    третий - изменение баланса, четвёртый - соотношение трат
-    по категориям, пятый - соотношение доходов по категории.
+    Returns:
+        tuple[dict]: Пять словарей: первые три - с датами в качестве ключей,
+            два последних - с категориями. Первый - расходы, второй - доходы,
+            третий - изменение баланса, четвёртый - соотношение трат по категориям,
+            пятый - соотношение доходов по категории.
     """
     assert len(oper_list[0]) == 8
 
@@ -484,13 +504,16 @@ def data_summary(oper_list: list, summary: str = 'day'):
         """
         Функция конструирует словарь расходов за периоды времени,
         указанные в summary_dates.
+        
+        Args:
+            summary_dates (list[str]): Список дат.
+            data (list[tuple]):  Список кортежей с информацией об операциях.
+            is_expences (bool): Являются ли данные расходами, если да,
+                то все стоимости и цены будут умножены на -1
 
-        :param summary_dates: Список дат.
-        :param data: Список кортежей с информацией об операциях.
-        :param is_expences: Являются ли данные рвсходами, если да,
-        то все стоимости и цены будут умножены на -1
-        :return: Словарь с дотами из summary_dates в качестве ключей
-        и с суммами по этим периодом времени в качестве значений.
+        Returns:
+            dict: Словарь с дотами из summary_dates в качестве ключей
+                и с суммами по этим периодом времени в качестве значений.
         """
         if is_expences:
             data = [(*it[:3], it[3] * -1, it[4], it[5] * -1, *it[6:])
@@ -514,13 +537,13 @@ def data_summary(oper_list: list, summary: str = 'day'):
 
     dates_ex = dict(sorted(
         make_dates(
-            sd, filter(lambda x: x[5] < 0, oper_list)
+            sd, list(filter(lambda x: x[5] < 0, oper_list))
         ).items()
     )) if list(filter(lambda x: x[5] < 0, oper_list)) else None
 
     dates_in = dict(sorted(
         make_dates(
-            sd, filter(lambda x: x[5] > 0, oper_list), False
+            sd, list(filter(lambda x: x[5] > 0, oper_list)), False
         ).items()
     )) if list(filter(lambda x: x[5] > 0, oper_list)) else None
 
@@ -553,11 +576,9 @@ def data_summary(oper_list: list, summary: str = 'day'):
     if ctex:
         ct_ex = {}
         for ct in ctex:
-            ct_ex[ct] = sum(it[5] * -1 for it in oper_list
-                            if it[6] == ct)
+            ct_ex[ct] = sum(it[5] * -1 for it in oper_list if it[6] == ct)
 
-        ct_ex = dict(sorted(ct_ex.items(), key=lambda x: x[1],
-                            reverse=True))
+        ct_ex = dict(sorted(ct_ex.items(), key=lambda x: x[1], reverse=True))
     else:
         ct_ex = None
 
@@ -566,8 +587,7 @@ def data_summary(oper_list: list, summary: str = 'day'):
         for ct in ctin:
             ct_in[ct] = sum(it[5] for it in oper_list if it[6] == ct)
 
-        ct_in = dict(sorted(ct_in.items(), key=lambda x: x[1],
-                            reverse=True))
+        ct_in = dict(sorted(ct_in.items(), key=lambda x: x[1], reverse=True))
     else:
         ct_in = None
 
@@ -578,15 +598,17 @@ def category_summary(oper_list: list, category: str):
     """
     Функция суммирует все стоимости операций из списка oper_list
     в словарь по подкатегориям указанной категории.
+    
+    Args:
+        oper_list (list[tuple]): Список кортежей с информацией об операциях.
+        category (str): Категория, подкатегории которой будут представлены
+            в словаре в качестве ключей.
 
-    :param oper_list:
-    :param category: Категория, подкатегории которой будут представлены
-    в словаре в качестве ключей.
-    :return: Словарь стоимостей подкатегорий из указанной категории.
+    Returns:
+        dict: Словарь стоимостей подкатегорий из указанной категории.
     """
-    assert category in catgs \
-           and category in list(subct_in_dict.keys())\
-           + list(subct_ex_dict.keys())
+    assert (category in catgs and category in list(subct_in_dict.keys())
+            + list(subct_ex_dict.keys()))
 
     ssc = {}
     if category in ct_ex_list:
@@ -599,24 +621,23 @@ def category_summary(oper_list: list, category: str):
                             if it[7] in subct_in_dict[category])
 
     for sct in subcategories:
-        ssc[sct] = sum(it[5] for it in oper_list if it[7] == sct) \
-                   * increment
+        ssc[sct] = sum(it[5] for it in oper_list if it[7] == sct) * increment
 
     return dict(sorted(ssc.items(), key=lambda x: x[1], reverse=True))
 
 
-def make_main_report(data: list[dict, ] or tuple[dict, ], ui):
+def make_main_report(data: list[dict] | tuple[dict], ui):
     """
-    Функция создаёт две столбчатые диаграммы, показывающие доходы
-    и расходы, две круговые диаграммы, показвыающие соотношение
-    категорий доходов и расходов, и график изменения баланса
-    пользователя.
+    
+    
+    Args:
+        data (list[dict] | tuple[dict]): Список из пяти элементов,
+            отвечающих за данные вышеописанных графиков. Если словаря нет
+            или его невозможно создать, следует указывать None.
+        ui (str | int): Идентификатор пользователя.
 
-    :param data: Список из пяти элементов, отвечающих за данные
-    вышеописанных графиков. Если словаря нет или его невозможно создать,
-     следует укащывать None.
-    :param ui: Идентификатор пользователя.
-    :return: Путь к изображению графиков.
+    Returns:
+        str: Путь к изображению графиков.
     """
     assert data
 
@@ -658,13 +679,16 @@ def make_main_report(data: list[dict, ] or tuple[dict, ], ui):
 
 def make_categories_report(data, categories, ui):
     """
-    Функция создаёт круговые диаграммы, отображающие соотношение
-    подкатегорий в указанных категориях.
-
-    :param data: Список словарей с данными по каждой категории.
-    :param categories: Назвария категрий, соответствующие списку data.
-    :param ui: Идентификатор пользователя.
-    :return: Путь к изображению диаграмм.
+    Функция создаёт круговые диаграммы, отображающие соотношение подкатегорий
+    в указанных категориях.
+    
+    Args:
+        data (list[dict]): Список словарей с данными по каждой категории.
+        categories (list[str]): Названия категорий, соответствующие списку data.
+        ui (str | int): Идентификатор пользователя.
+        
+    Returns:
+        str: Путь к изображению диаграмм.
     """
     assert data and categories
 
@@ -692,7 +716,7 @@ def make_categories_report(data, categories, ui):
 if __name__ == '__main__':
     print(show_balance('INSERT_YOUR_TG_ID'))
     print([(t[2], t[1]) for t in select_operations(
-        ui=1548032094, sort_by='date')])
+        ui='INSERT_YOUR_TG_ID', sort_by='date')])
 
     crs1.execute("SELECT * FROM operations WHERE "
                  "user_id = md5(INSERT_YOUR_TG_ID) AND 0.0 <= amount "
@@ -711,20 +735,23 @@ if __name__ == '__main__':
                            ('Еда', 'Хлебобулочные', 'Развлечения',
                             *subct_ex_dict['Развлечения']),
                            sort_by=('category', 'date'))
-    print("Хлебобулочные = ",
-          sum([op[5] for op in so if op[7] == 'Хлебобулочные']))
+    print("Хлебобулочные = ", sum([op[5] for op in so if op[7] == 'Хлебобулочные']))
 
     print(*data_summary(select_operations(date_for('month'), "date",
                                           ui='INSERT_YOUR_TG_ID'),
                         'day'), sep='\n\n')
     make_main_report(data_summary(
         select_operations(date_for('month'), "date", ui='INSERT_YOUR_TG_ID'),
-                     'day'), (True, True, True), 'INSERT_YOUR_TG_ID')
+        'day'),
+        'INSERT_YOUR_TG_ID'
+    )
 
     d = []
     for c in ['Товары', "Еда"]:
         d.append(category_summary(
-            select_operations(date_for('month'), "date", ui='INSERT_YOUR_TG_ID'),
-            c))
+            select_operations(date_for('month'), "date",
+                              ui='INSERT_YOUR_TG_ID'),
+            c)
+        )
 
     make_categories_report(d, ['Товары', "Еда"], ui='INSERT_YOUR_TG_ID')
