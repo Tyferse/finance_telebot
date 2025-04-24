@@ -718,8 +718,12 @@ MigrationBackup/
 #  option (not recommended) you can uncomment the following to ignore the entire idea folder.
 .idea/
 
+*.bat
+*.exe
 *.html
-data_define/categorizer.data
-local_database/backup_data.data*
+/data_define/categorizer.data
+/local_database/backup_data.data*
+/plots
 *.png
 *.db
+
