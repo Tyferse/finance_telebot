@@ -722,3 +722,4 @@ MigrationBackup/
 data_define/categorizer.data
 local_database/backup_data.data*
 *.png
+*.db
