@@ -11,5 +11,8 @@ Abilities:
 
 * Loading QR code data and getting infromation from it;
 * Manual entry of purchases data using template;
-* Viewing purchases history, word filter and columns sort;
-* 
+* Viewing purchases history, word filter, data filter and columns sort;
+* Deleting entries from list and backup of last deletion;
+* Current balance view (incomes and expenses difference);
+* Category prediction (with ability to change it manualy);
+* Viewing graphs of categories distribution and balance history.
